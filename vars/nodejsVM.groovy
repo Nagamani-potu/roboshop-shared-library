@@ -92,7 +92,7 @@ def call(Map configMap) {
                 steps {
                     script {
                         def buildParams = [
-                            [$class: 'StringParameterValue', name: 'version', value: "${packageVersion}"],
+                            [$class: 'StringParameterValue', name: 'version', value: packageVersion],
                             [$class: 'StringParameterValue', name: 'environment', value: 'dev'],
                             [$class: 'BooleanParameterValue', name: 'Create', value: params.Deploy]
                         ]
