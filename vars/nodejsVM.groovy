@@ -1,31 +1,24 @@
-def call(Map configMap){
+def call(Map configMap) {
     pipeline {
         agent {
             node {
                 label 'AGENT-1'
             }
         }
-        environment { 
+
+        environment {
             packageVersion = ''
-            // can maintain in pipeline globals
-            //nexusURL = '172.31.5.95:8081'
         }
+
         options {
             timeout(time: 1, unit: 'HOURS')
             disableConcurrentBuilds()
         }
+
         parameters {
-            // string(name: 'PERSON', defaultValue: 'Mr Jenkins', description: 'Who should I say hello to?')
-
-            // text(name: 'BIOGRAPHY', defaultValue: '', description: 'Enter some information about the person')
-
             booleanParam(name: 'Deploy', defaultValue: false, description: 'Toggle this value')
-
-            // choice(name: 'CHOICE', choices: ['One', 'Two', 'Three'], description: 'Pick something')
-
-            // password(name: 'PASSWORD', defaultValue: 'SECRET', description: 'Enter a password')
         }
-        // build
+
         stages {
             stage('Get the version') {
                 steps {
@@ -36,28 +29,28 @@ def call(Map configMap){
                     }
                 }
             }
+
             stage('Install dependencies') {
                 steps {
-                    sh """
-                        npm install
-                    """
+                    sh 'npm install'
                 }
             }
+
             stage('Unit tests') {
                 steps {
-                    sh """
-                        echo "unit tests will run here"
-                    """
+                    sh 'echo "unit tests will run here"'
                 }
             }
-            stage('Sonar Scan'){
-                steps{
-                    sh """
+
+            stage('Sonar Scan') {
+                steps {
+                    sh '''
                         echo "usually command here is sonar-scanner"
                         echo "sonar scan will run here"
-                    """
+                    '''
                 }
             }
+
             stage('Build') {
                 steps {
                     sh """
@@ -67,6 +60,7 @@ def call(Map configMap){
                     """
                 }
             }
+
             stage('Publish Artifact') {
                 steps {
                     nexusArtifactUploader(
@@ -78,43 +72,47 @@ def call(Map configMap){
                         repository: "${configMap.component}",
                         credentialsId: 'nexus-auth',
                         artifacts: [
-                            [artifactId: "${configMap.component}",
-                            classifier: '',
-                            file: "${configMap.component}.zip",
-                            type: 'zip']
+                            [
+                                artifactId: "${configMap.component}",
+                                classifier: '',
+                                file: "${configMap.component}.zip",
+                                type: 'zip'
+                            ]
                         ]
                     )
                 }
             }
+
             stage('Deploy') {
                 when {
-                    expression{
-                        params.Deploy
+                    expression {
+                        return params.Deploy
                     }
                 }
                 steps {
                     script {
-                            def params = [
-                                string(name: 'version', value: "$packageVersion"),
-                                string(name: 'environment', value: "dev")
-                                booleanParam(name: 'Create', value: "${params.Deploy}")
-                            ]
-                            build job: "../${configMap.component}-deploy", wait: true, parameters: params
-                        }
+                        def buildParams = [
+                            [$class: 'StringParameterValue', name: 'version', value: "${packageVersion}"],
+                            [$class: 'StringParameterValue', name: 'environment', value: 'dev'],
+                            [$class: 'BooleanParameterValue', name: 'Create', value: params.Deploy]
+                        ]
+
+                        build job: "../${configMap.component}-deploy", wait: true, parameters: buildParams
+                    }
                 }
             }
         }
-        // post build
-        post { 
-            always { 
+
+        post {
+            always {
                 echo 'I will always say Hello again!'
                 deleteDir()
             }
-            failure { 
-                echo 'this runs when pipeline is failed, used generally to send some alerts'
+            failure {
+                echo 'This runs when the pipeline fails. Generally used to send alerts.'
             }
-            success{
-                echo 'I will say Hello when pipeline is success'
+            success {
+                echo 'Pipeline succeeded!'
             }
         }
     }
